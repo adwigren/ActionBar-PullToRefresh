@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import uk.co.senab.actionbarpulltorefresh.library.viewdelegates.AbsListViewDelegate;
-import uk.co.senab.actionbarpulltorefresh.library.viewdelegates.ScrollYDelegate;
+import uk.co.senab.actionbarpulltorefresh.library.viewdelegates.ScrollViewDelegate;
 import uk.co.senab.actionbarpulltorefresh.library.viewdelegates.WebViewDelegate;
 
 class InstanceCreationUtils {
@@ -40,6 +40,7 @@ class InstanceCreationUtils {
     static {
         BUILT_IN_DELEGATES = new HashMap<Class, Class>();
         BUILT_IN_DELEGATES.put(AbsListViewDelegate.SUPPORTED_VIEW_CLASS, AbsListViewDelegate.class);
+        BUILT_IN_DELEGATES.put(ScrollViewDelegate.SUPPORTED_VIEW_CLASS, ScrollViewDelegate.class);
         BUILT_IN_DELEGATES.put(WebViewDelegate.SUPPORTED_VIEW_CLASS, WebViewDelegate.class);
     }
 
@@ -51,10 +52,7 @@ class InstanceCreationUtils {
                         entry.getValue(), VIEW_DELEGATE_CONSTRUCTOR_SIGNATURE, null);
             }
         }
-
-        // Default is the ScrollYDelegate
-        return InstanceCreationUtils.newInstance(view.getContext(),
-                ScrollYDelegate.class, VIEW_DELEGATE_CONSTRUCTOR_SIGNATURE, null);
+        return null;
     }
 
     static <T> T instantiateViewDelegate(Context context, String className, Object[] arguments) {
