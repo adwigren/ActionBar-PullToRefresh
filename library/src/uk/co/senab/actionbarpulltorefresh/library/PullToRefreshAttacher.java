@@ -19,19 +19,15 @@ package uk.co.senab.actionbarpulltorefresh.library;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.PixelFormat;
-import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.animation.Interpolator;
-import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -77,8 +73,8 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
      * 
      * @param activity
      */
-    public PullToRefreshAttacher(Activity activity) {
-        this(activity, new Options());
+    public PullToRefreshAttacher(Activity activity, View headerView) {
+        this(activity, headerView, new Options());
     }
 
     /**
@@ -87,7 +83,8 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
      * @param activity
      * @param options
      */
-    public PullToRefreshAttacher(Activity activity, Options options) {
+    public PullToRefreshAttacher(Activity activity, View headerView,
+                                 Options options) {
         if (options == null) {
             Log.i(LOG_TAG, "Given null options so using default options.");
             options = new Options();
@@ -117,36 +114,9 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
         // Get touch slop for use later
         mTouchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
 
-        // Get Window Decor View
-        final ViewGroup decorView = (ViewGroup) activity.getWindow()
-                .getDecorView();
-
-        // Create Header view and then add to Decor View
-        mHeaderView = LayoutInflater.from(
-                mEnvironmentDelegate.getContextForInflater(activity)).inflate(
-                options.headerLayout, decorView, false);
-        if (mHeaderView == null) {
-            throw new IllegalArgumentException(
-                    "Must supply valid layout id for header.");
-        }
+        mHeaderView = headerView;
         mHeaderView.setVisibility(View.GONE);
 
-        // Create DecorChildLayout which will move all of the system's decor
-        // view's children + the
-        // Header View to itself. See DecorChildLayout for more info.
-        if (decorView.getChildCount() > 0
-                && decorView.getChildAt(0) instanceof DecorChildLayout) {
-            DecorChildLayout decorContents = (DecorChildLayout) decorView
-                    .getChildAt(0);
-            decorContents.resetHeader(mHeaderView);
-        } else {
-            DecorChildLayout decorContents = new DecorChildLayout(activity,
-                    decorView, mHeaderView);
-            // Now add the DecorChildLayout to the decor view
-            decorView.addView(decorContents,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT);
-        }
         // Notify transformer
         mHeaderTransformer.onViewCreated(activity, mHeaderView);
     }
@@ -539,9 +509,8 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 
     public static abstract class HeaderTransformer {
         /**
-         * Called whether the header view has been inflated from the resources
-         * defined in {@link Options#headerLayout}.
-         * 
+         * Called whether the header view has been added
+         *
          * @param headerView
          *            - inflated header view.
          */
@@ -567,14 +536,14 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 
         /**
          * Called when a refresh has begun. Theoretically this call is similar
-         * to that provided from {@link OnRefreshListener} but is more suitable
+         * to that provided from {@link uk.co.senab.actionbarpulltorefresh.library.PullToRefreshAttacher.OnRefreshListener} but is more suitable
          * for header view updates.
          */
         public abstract void onRefreshStarted();
 
         /**
          * Called when a refresh can be initiated when the user ends the touch
-         * event. This is only called when {@link Options#refreshOnUp} is set to
+         * event. This is only called when {@link uk.co.senab.actionbarpulltorefresh.library.PullToRefreshAttacher.Options#refreshOnUp} is set to
          * true.
          */
         public abstract void onReleaseToRefresh();
@@ -622,14 +591,8 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
         public EnvironmentDelegate environmentDelegate = null;
 
         /**
-         * The layout resource ID which should be inflated to be displayed above
-         * the Action Bar
-         */
-        public int headerLayout = DEFAULT_HEADER_LAYOUT;
-
-        /**
          * The header transformer to be used to transfer the header view. If
-         * null, an instance of {@link DefaultHeaderTransformer} will be used.
+         * null, an instance of {@link uk.co.senab.actionbarpulltorefresh.library.PullToRefreshAttacher.DefaultHeaderTransformer} will be used.
          */
         public HeaderTransformer headerTransformer = null;
 
@@ -703,12 +666,6 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
                     .getString(R.string.pull_to_refresh_refreshing_label);
             mReleaseLabel = activity
                     .getString(R.string.pull_to_refresh_release_label);
-
-            View contentView = headerView.findViewById(R.id.ptr_content);
-            if (contentView != null) {
-                contentView.getLayoutParams().height = getActionBarSize(activity);
-                contentView.requestLayout();
-            }
 
             Drawable abBg = getActionBarBackground(activity);
             if (abBg != null) {
@@ -811,13 +768,6 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
             mReleaseLabel = releaseText;
         }
 
-        /**
-         * Using P1Actionbar so no need of themes, to make it compatible with
-         * 2.2.
-         * 
-         * @param releaseText
-         *            - Text to display.
-         */
         protected Drawable getActionBarBackground(Context context) {
             return context.getResources().getDrawable(
                     R.color.actionbar_background);
@@ -842,69 +792,7 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
             // }
         }
 
-        protected int getActionBarSize(Context context) {
-            return (int) ((int) context.getResources().getDimension(
-                    R.dimen.actionbar_height) * 1.5);
-            // int[] attrs = { android.R.attr.actionBarSize };
-            // TypedArray values =
-            // context.getTheme().obtainStyledAttributes(attrs);
-            // try {
-            // return values.getDimensionPixelSize(0, 0);
-            // } finally {
-            // values.recycle();
-            // }
-        }
     }
 
-    /**
-     * This class allows us to insert a layer in between the system decor view
-     * and the actual decor. (e.g. Action Bar views). This is needed so we can
-     * receive a call to fitSystemWindows(Rect) so we can adjust the header view
-     * to fit the system windows too.
-     */
-    final static class DecorChildLayout extends FrameLayout {
-        private ViewGroup mHeaderViewWrapper;
-
-        DecorChildLayout(Context context, ViewGroup systemDecorView,
-                View headerView) {
-            super(context);
-
-            // Move all children from decor view to here
-            for (int i = 0, z = systemDecorView.getChildCount(); i < z; i++) {
-                View child = systemDecorView.getChildAt(i);
-                systemDecorView.removeView(child);
-                addView(child);
-            }
-
-            /**
-             * Wrap the Header View in a FrameLayout and add it to this view. It
-             * is wrapped so any inset changes do not affect the actual header
-             * view.
-             */
-            mHeaderViewWrapper = new FrameLayout(context);
-            mHeaderViewWrapper.addView(headerView);
-            addView(mHeaderViewWrapper, ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT);
-        }
-
-        public void resetHeader(View headerView) {
-            mHeaderViewWrapper.removeAllViews();
-            mHeaderViewWrapper.addView(headerView);
-        }
-
-        @Override
-        protected boolean fitSystemWindows(Rect insets) {
-            if (DEBUG) {
-                Log.d(LOG_TAG, "fitSystemWindows: " + insets.toString());
-            }
-
-            // Adjust the Header View's padding to take the insets into account
-            mHeaderViewWrapper.setPadding(insets.left, insets.top,
-                    insets.right, insets.bottom);
-
-            // Call return super so that the rest of the
-            return super.fitSystemWindows(insets);
-        }
-    }
 
 }
